@@ -5,8 +5,8 @@ using System.Text;
 
 namespace DataAccess.Abstrack
 {
-    public interface IProductDal:IEntityRepostory<Product>
+    public interface ICustomerDal:IEntityRepostory<Customer>
     {
-        
+
     }
 }

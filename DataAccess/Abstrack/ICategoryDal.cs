@@ -7,7 +7,7 @@ using System.Text;
 
 namespace DataAccess.Abstrack
 {
-    public interface ICategoryDal : IEntityRepostory<Category>
+    public interface ICategoryDal:IEntityRepostory<Category>
     {
 
     }

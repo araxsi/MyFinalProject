@@ -1,15 +1,14 @@
 ﻿using Core.DataAccess.EntityFramework;
 using DataAccess.Abstrack;
+using DataAccess.Concrete.EntityFramework;
 using Entities.Concrete;
 using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using System.Text;
 
-namespace DataAccess.Concrete.EntityFramework
+namespace DataAccess.Concrete
 {
-    public class EfCategoryDal : EfEntityRepostoryBase<Category,NortwindContext>,IOrdersDal
+    public class EfOrdersDal: EfEntityRepostoryBase<Orders, NortwindContext>,IOrdersDal
     {
-        
     }
 }

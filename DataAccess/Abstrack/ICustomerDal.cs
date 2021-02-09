@@ -4,10 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace DataAccess.Abstrack
+namespace DataAccess.Abstract
 {
-    public interface ICustomerDal:IEntityRepostory<Customer>
+    public interface ICustomerDal : IEntityRepository<Customer>
     {
-
     }
 }

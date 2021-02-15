@@ -6,14 +6,14 @@ namespace Core.Utilities.Results
 {
     public class SuccessResult : Result
     {
-        public SuccessResult(string mesage) : base(true, mesage)
+        public SuccessResult(string message) : base(true, message)
         {
 
         }
+
         public SuccessResult() : base(true)
         {
 
         }
-    }    
-
+    }
 }

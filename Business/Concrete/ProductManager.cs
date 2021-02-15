@@ -20,6 +20,7 @@ namespace Business.Concrete
             _productDal = productDal;
         }
 
+
         public IResult Add(Product product)
         {
             //business codes
@@ -33,6 +34,7 @@ namespace Business.Concrete
 
             return new SuccessResult(Messages.ProductAdded);
         }
+
 
         public IDataResult<List<Product>> GetAll()
         {

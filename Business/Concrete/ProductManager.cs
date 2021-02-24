@@ -1,4 +1,5 @@
 ﻿using Business.Abstract;
+using Business.CCS;
 using Business.Constants;
 using Business.ValidationRules.FluentValidation;
 using Core.Aspects.Autofac.Validation;
@@ -11,6 +12,7 @@ using Entities.DTOs;
 using FluentValidation;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Business.Concrete
@@ -18,23 +20,44 @@ namespace Business.Concrete
     public class ProductManager : IProductService
     {
         IProductDal _productDal;
+        
 
         public ProductManager(IProductDal productDal)
         {
             _productDal = productDal;
+            
         }
 
         [ValidationAspect(typeof(ProductValidator))]
         public IResult Add(Product product)
         {
+            //bir kategoryde satedece 10 ürün olması gerekiyor kuralının işlenmesi
+            //Hatalı bir çalışmadır. İş kuralları her zaman değişkendir ve güncellenebilir. Bu sebeble işlenmiş ve düzenlenmiş olması gereklidir
+            //var result = _productDal.GetAll(p => p.CategoryId == product.CategoryId).Count;
+            //if (result >= 10)
+            //{
+            //    return new ErrorResult(Messages.ProductCountOfCategoryError);
+            //}
+
             //business codes
+
             //Validation
 
-            _productDal.Add(product);
+            if (CheckIfProductCountofCategoryCorrect(product.CategoryId).Success)
+            {
+                if (CheckIfProductNameTheSame(product.ProductName).Success)
+                {
+                    _productDal.Add(product);
+                    return new SuccessResult(Messages.ProductAdded);
+                }
+            }
+            return new ErrorResult();
 
-            return new SuccessResult(Messages.ProductAdded);
+            
+
+
+
         }
-
 
         public IDataResult<List<Product>> GetAll()
         {
@@ -68,6 +91,32 @@ namespace Business.Concrete
                 return new ErrorDataResult<List<ProductDetailDto>>(Messages.MaintenanceTime);
             }
             return new SuccessDataResult<List<ProductDetailDto>>(_productDal.GetProductDetails());
+        }
+
+        public IResult Update(Product product)
+        {
+            throw new NotImplementedException();
+        }
+
+        //Yukarıdaki kuralın temiz ve doğru halidir.
+        private IResult CheckIfProductCountofCategoryCorrect (int categoryId)
+        {
+            var result = _productDal.GetAll(p => p.CategoryId == categoryId).Count;
+            if (result >= 10)
+        {
+                return new ErrorResult(Messages.ProductCountOfCategoryError);
+        }
+            return new SuccessResult();
+        }
+
+        private IResult CheckIfProductNameTheSame(string productname)
+        {
+            var result = _productDal.GetAll(p => p.ProductName == productname).Any();
+            if (result)
+            {
+                return new ErrorResult(Messages.ProductNameAlreadyExists);
+            }
+            return new SuccessResult();
         }
     }
 }

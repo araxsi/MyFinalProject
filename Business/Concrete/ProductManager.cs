@@ -4,6 +4,7 @@ using Business.Constants;
 using Business.ValidationRules.FluentValidation;
 using Core.Aspects.Autofac.Validation;
 using Core.CrossCuttingConcerns.Validation;
+using Core.Utilities.Business;
 using Core.Utilities.Results;
 using DataAccess.Abstract;
 using DataAccess.Concrete.InMemory;
@@ -20,11 +21,13 @@ namespace Business.Concrete
     public class ProductManager : IProductService
     {
         IProductDal _productDal;
+        ICategoryService _categoryService;
         
 
-        public ProductManager(IProductDal productDal)
+        public ProductManager(IProductDal productDal,ICategoryService categoryService)
         {
             _productDal = productDal;
+            _categoryService = categoryService;
             
         }
 
@@ -38,26 +41,24 @@ namespace Business.Concrete
             //{
             //    return new ErrorResult(Messages.ProductCountOfCategoryError);
             //}
+            //3 kuraldır..Eğer mevcut kategori sayısı 15'i geçtiyse sisteme yeni ürün eklenemez kuralını yazınız.
+
 
             //business codes
 
             //Validation
+            IResult result= BusinessRules.Run(CheckIfProductNameTheSame(product.ProductName), CheckIfProductCountofCategoryCorrect(product.CategoryId), 
+                CheckIfCategoryLimitExceded());
 
-            if (CheckIfProductCountofCategoryCorrect(product.CategoryId).Success)
+            if (result !=null)
             {
-                if (CheckIfProductNameTheSame(product.ProductName).Success)
-                {
-                    _productDal.Add(product);
-                    return new SuccessResult(Messages.ProductAdded);
-                }
+                return result;
             }
-            return new ErrorResult();
 
             
-
-
-
-        }
+                    _productDal.Add(product);
+                    return new SuccessResult(Messages.ProductAdded);
+            }
 
         public IDataResult<List<Product>> GetAll()
         {
@@ -108,7 +109,7 @@ namespace Business.Concrete
         }
             return new SuccessResult();
         }
-
+        //2 Kural : Aynı isimde ürün eklenemez. 
         private IResult CheckIfProductNameTheSame(string productname)
         {
             var result = _productDal.GetAll(p => p.ProductName == productname).Any();
@@ -118,5 +119,18 @@ namespace Business.Concrete
             }
             return new SuccessResult();
         }
+        //3 kural kodu aşağıdaki gibidir.
+        private IResult CheckIfCategoryLimitExceded()
+        {
+            var result = _categoryService.GetAll();
+            if (result.Data.Count > 15)
+            {
+                return new ErrorResult(Messages.CategoryLimitExceded);
+            }
+
+            return new SuccessResult();
+        }
+
+
     }
 }

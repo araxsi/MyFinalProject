@@ -3,7 +3,9 @@ using Business.BusinessAspects.Autofac;
 using Business.CCS;
 using Business.Constants;
 using Business.ValidationRules.FluentValidation;
+using Core.Aspects.Autofac.Caching;
 using Core.Aspects.Autofac.Validation;
+using Core.CrossCuttingConcerns.Caching;
 using Core.CrossCuttingConcerns.Validation;
 using Core.Utilities.Business;
 using Core.Utilities.Results;
@@ -23,48 +25,42 @@ namespace Business.Concrete
     {
         IProductDal _productDal;
         ICategoryService _categoryService;
-        
 
-        public ProductManager(IProductDal productDal,ICategoryService categoryService)
+        public ProductManager(IProductDal productDal, ICategoryService categoryService)
         {
             _productDal = productDal;
             _categoryService = categoryService;
-            
         }
+
+        //00.25 Dersteyiz
+        //Claim
         [SecuredOperation("product.add,admin")]
-        
         [ValidationAspect(typeof(ProductValidator))]
+        [CacheRemoveAspect("IProductService.Get")]
         public IResult Add(Product product)
         {
-            //bir kategoryde satedece 10 ürün olması gerekiyor kuralının işlenmesi
-            //Hatalı bir çalışmadır. İş kuralları her zaman değişkendir ve güncellenebilir. Bu sebeble işlenmiş ve düzenlenmiş olması gereklidir
-            //var result = _productDal.GetAll(p => p.CategoryId == product.CategoryId).Count;
-            //if (result >= 10)
-            //{
-            //    return new ErrorResult(Messages.ProductCountOfCategoryError);
-            //}
-            //3 kuraldır..Eğer mevcut kategori sayısı 15'i geçtiyse sisteme yeni ürün eklenemez kuralını yazınız.
 
+            //Aynı isimde ürün eklenemez
+            //Eğer mevcut kategori sayısı 15'i geçtiyse sisteme yeni ürün eklenemez. ve 
+            IResult result = BusinessRules.Run(CheckIfProductNameExists(product.ProductName),
+                CheckIfProductCountOfCategoryCorrect(product.CategoryId), CheckIfCategoryLimitExceded());
 
-            //business codes
-
-            //Validation
-            IResult result= BusinessRules.Run(CheckIfProductNameTheSame(product.ProductName), CheckIfProductCountofCategoryCorrect(product.CategoryId), 
-                CheckIfCategoryLimitExceded());
-
-            if (result !=null)
+            if (result != null)
             {
                 return result;
             }
 
-            
-                    _productDal.Add(product);
-                    return new SuccessResult(Messages.ProductAdded);
-            }
+            _productDal.Add(product);
 
+            return new SuccessResult(Messages.ProductAdded);
+
+        }
+
+
+        [CacheAspect] //key,value
         public IDataResult<List<Product>> GetAll()
         {
-            if (DateTime.Now.Hour == 22)
+            if (DateTime.Now.Hour == 1)
             {
                 return new ErrorDataResult<List<Product>>(Messages.MaintenanceTime);
             }
@@ -77,6 +73,8 @@ namespace Business.Concrete
             return new SuccessDataResult<List<Product>>(_productDal.GetAll(p => p.CategoryId == id));
         }
 
+        [CacheAspect]
+        //[PerformanceAspect(5)]
         public IDataResult<Product> GetById(int productId)
         {
             return new SuccessDataResult<Product>(_productDal.Get(p => p.ProductId == productId));
@@ -96,32 +94,39 @@ namespace Business.Concrete
             return new SuccessDataResult<List<ProductDetailDto>>(_productDal.GetProductDetails());
         }
 
+        [ValidationAspect(typeof(ProductValidator))]
+        [CacheRemoveAspect("IProductService.Get")]
         public IResult Update(Product product)
         {
+            var result = _productDal.GetAll(p => p.CategoryId == product.CategoryId).Count;
+            if (result >= 10)
+            {
+                return new ErrorResult(Messages.ProductCountOfCategoryError);
+            }
             throw new NotImplementedException();
         }
 
-        //Yukarıdaki kuralın temiz ve doğru halidir.
-        private IResult CheckIfProductCountofCategoryCorrect (int categoryId)
+        private IResult CheckIfProductCountOfCategoryCorrect(int categoryId)
         {
+            //Select count(*) from products where categoryId=1
             var result = _productDal.GetAll(p => p.CategoryId == categoryId).Count;
-            if (result >= 10)
-        {
+            if (result >= 15)
+            {
                 return new ErrorResult(Messages.ProductCountOfCategoryError);
-        }
+            }
             return new SuccessResult();
         }
-        //2 Kural : Aynı isimde ürün eklenemez. 
-        private IResult CheckIfProductNameTheSame(string productname)
+
+        private IResult CheckIfProductNameExists(string productName)
         {
-            var result = _productDal.GetAll(p => p.ProductName == productname).Any();
+            var result = _productDal.GetAll(p => p.ProductName == productName).Any();
             if (result)
             {
                 return new ErrorResult(Messages.ProductNameAlreadyExists);
             }
             return new SuccessResult();
         }
-        //3 kural kodu aşağıdaki gibidir.
+
         private IResult CheckIfCategoryLimitExceded()
         {
             var result = _categoryService.GetAll();
@@ -133,6 +138,19 @@ namespace Business.Concrete
             return new SuccessResult();
         }
 
+        //[TransactionScopeAspect]
+        public IResult AddTransactionalTest(Product product)
+        {
 
+            Add(product);
+            if (product.UnitPrice < 10)
+            {
+                throw new Exception("");
+            }
+
+            Add(product);
+
+            return null;
+        }
     }
 }
